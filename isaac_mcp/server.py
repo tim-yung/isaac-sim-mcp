@@ -265,7 +265,7 @@ def get_scene_info(ctx: Context) -> str:
     try:
         isaac = get_isaac_connection()
         result = isaac.send_command("get_scene_info")
-        print("result: ", result)
+        logger.debug(f"get_scene_info result keys: {list(result.keys()) if isinstance(result, dict) else type(result)}")
         
         # Just return the JSON representation of what Isaac sent us
         return json.dumps(result, indent=2)
@@ -439,10 +439,17 @@ simulation_context.stop()
     try:
         # Get the global connection
         isaac = get_isaac_connection()
-        print("code: ", code)
+        # IMPORTANT: never print to stdout in MCP stdio servers.
+        # Printing here corrupts JSON-RPC framing and causes client parse failures.
+        logger.debug(f"execute_script code length={len(code)}")
         
         result = isaac.send_command("execute_script", {"code": code})
-        print("result: ", result)
+        if isinstance(result, str):
+            logger.debug(f"execute_script result length={len(result)}")
+        elif isinstance(result, dict):
+            logger.debug(f"execute_script result keys={list(result.keys())}")
+        else:
+            logger.debug(f"execute_script result type={type(result)}")
         # Convert result to string if it's a dictionary
         if isinstance(result, dict):
             return json.dumps(result, indent=2)
