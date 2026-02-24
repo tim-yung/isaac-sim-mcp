@@ -219,7 +219,7 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
 # Create the MCP server with lifespan support
 mcp = FastMCP(
     "IsaacSimMCP",
-    description="Isaac Sim integration through the Model Context Protocol",
+    instructions="Isaac Sim integration through the Model Context Protocol",
     lifespan=server_lifespan
 )
 
@@ -273,8 +273,7 @@ def get_scene_info(ctx: Context) -> str:
         # return result
     except Exception as e:
         logger.error(f"Error getting scene info from Isaac: {str(e)}")
-        # return f"Error getting scene info: {str(e)}"
-        return {"status": "error", "error": str(e), "message": "Error getting scene info"}
+        return json.dumps({"status": "error", "error": str(e), "message": "Error getting scene info"})
 
 # @mcp.tool()
 # def get_object_info(ctx: Context, object_name: str) -> str:
@@ -375,8 +374,7 @@ def omni_kit_command(command: str = "CreatePrim", prim_type: str = "Sphere") -> 
         return f"Omni Kit command executed successfully: {result.get('message', '')}"
     except Exception as e:
         logger.error(f"Error executing Omni Kit command: {str(e)}")
-        # return f"Error executing Omni Kit command: {str(e)}"
-        return {"status": "error", "error": str(e), "message": "Error executing Omni Kit command"}
+        return json.dumps({"status": "error", "error": str(e), "message": "Error executing Omni Kit command"})
 
 
 @mcp.tool()
@@ -445,12 +443,13 @@ simulation_context.stop()
         
         result = isaac.send_command("execute_script", {"code": code})
         print("result: ", result)
+        # Convert result to string if it's a dictionary
+        if isinstance(result, dict):
+            return json.dumps(result, indent=2)
         return result
-        # return f"Code executed successfully: {result.get('result', '')}"
     except Exception as e:
         logger.error(f"Error executing code: {str(e)}")
-        # return f"Error executing code: {str(e)}"
-        return {"status": "error", "error": str(e), "message": "Error executing code"}
+        return json.dumps({"status": "error", "error": str(e), "message": "Error executing code"})
                 
 @mcp.prompt()
 def asset_creation_strategy() -> str:

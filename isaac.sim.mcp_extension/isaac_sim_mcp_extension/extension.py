@@ -350,10 +350,15 @@ class MCPExtension(omni.ext.IExt):
             # Execute the script
             exec(code,  local_ns)
             
-            # Get the result if any
-            # result = local_ns.get("result", None)
-            result = None
-            
+            # Get the result if the script set it (e.g. result = text_report)
+            result = local_ns.get("result", None)
+            # Convert to JSON-serializable form if it's a dict/list for MCP response
+            if result is not None and not isinstance(result, (str, int, float, bool, type(None))):
+                try:
+                    import json
+                    result = json.dumps(result, indent=2, default=str)
+                except Exception:
+                    result = str(result)
             
             return {
                 "status": "success",
