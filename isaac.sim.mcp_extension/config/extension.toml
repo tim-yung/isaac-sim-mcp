@@ -7,9 +7,12 @@ category = "Robotics"
 keywords = ["mcp", "server", "socket", "simulation", "robotics"]
 
 [dependencies]
-"omni.isaac.core" = {}
-"omni.kit.uiapp" = {}
-"omni.isaac.ui" = {}
+# Isaac Sim 6.0+ (isaacsim.* namespace)
+# omni.isaac.core / omni.isaac.ui / omni.kit.uiapp were removed in Isaac Sim 6.
+# The only hard dependency for the socket server is omni.kit.async_engine (always
+# present in Kit).  All isaac-specific helpers are lazy-imported inside their
+# respective methods so the extension loads cleanly without them.
+"omni.kit.async_engine" = {}
 
 
 

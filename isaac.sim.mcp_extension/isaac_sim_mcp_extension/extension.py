@@ -43,10 +43,49 @@ import omni.kit.commands
 import omni.physx as _physx
 import omni.timeline
 from typing import Dict, Any, List, Optional, Union
-from omni.isaac.nucleus import get_assets_root_path
-from omni.isaac.core.prims import XFormPrim
 import numpy as np
-from omni.isaac.core import World
+
+# ---- Isaac Sim 5 imports (omni.isaac.*) ----------------------------------------
+# These modules were renamed in Isaac Sim 6.0 to the isaacsim.* namespace.
+# They are NOT required for the socket server's execute_script path; only optional
+# helper methods (create_robot, get_scene_info) use them.  Wrap in try/except so
+# the extension still loads on Isaac Sim 6 even if these packages are absent.
+try:
+    from omni.isaac.nucleus import get_assets_root_path as _get_assets_root_path_v5
+except ImportError:
+    _get_assets_root_path_v5 = None
+
+try:
+    from omni.isaac.core.prims import XFormPrim as _XFormPrim_v5
+except ImportError:
+    _XFormPrim_v5 = None
+
+try:
+    from omni.isaac.core import World as _World_v5  # noqa: F401
+except ImportError:
+    _World_v5 = None
+
+# ---- Isaac Sim 6 imports (isaacsim.*) ------------------------------------------
+try:
+    from isaacsim.storage.native import get_assets_root_path as _get_assets_root_path_v6
+except ImportError:
+    _get_assets_root_path_v6 = None
+
+try:
+    from isaacsim.core.experimental.prims import XFormPrim as _XFormPrim_v6
+except ImportError:
+    _XFormPrim_v6 = None
+
+# Resolve to whichever version is available
+def get_assets_root_path():
+    """Return the assets root path, compatible with Isaac Sim 5 and 6."""
+    fn = _get_assets_root_path_v6 or _get_assets_root_path_v5
+    if fn is None:
+        return ""
+    return fn()
+
+XFormPrim = _XFormPrim_v6 or _XFormPrim_v5
+
 # Import Beaver3d and USDLoader
 from isaac_sim_mcp_extension.gen3d import Beaver3d
 from isaac_sim_mcp_extension.usd import USDLoader
@@ -379,7 +418,7 @@ class MCPExtension(omni.ext.IExt):
         self._stage = omni.usd.get_context().get_stage()
         assert self._stage is not None
         stage_path = self._stage.GetRootLayer().realPath
-        assets_root_path = get_assets_root_path()
+        assets_root_path = get_assets_root_path()  # compat wrapper (v5 or v6)
         return {"status": "success", "message": "pong", "assets_root_path": assets_root_path}
         
     def omini_kit_command(self,  command: str, prim_type: str) -> Dict[str, Any]:
@@ -388,13 +427,20 @@ class MCPExtension(omni.ext.IExt):
         return {"status": "success", "message": "command executed"}
     
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]):
-        from omni.isaac.core.utils.prims import create_prim
-        from omni.isaac.core.utils.stage import add_reference_to_stage, is_stage_loading
-        from omni.isaac.nucleus import get_assets_root_path
-        
+        # Lazy-import stage utilities: try v6 (isaacsim.*) then fall back to v5 (omni.isaac.*)
+        add_reference_to_stage = None
+        try:
+            from isaacsim.core.utils.stage import add_reference_to_stage
+        except ImportError:
+            pass
+        if add_reference_to_stage is None:
+            try:
+                from omni.isaac.core.utils.stage import add_reference_to_stage
+            except ImportError:
+                pass
 
         stage = omni.usd.get_context().get_stage()
-        assets_root_path = get_assets_root_path()
+        assets_root_path = get_assets_root_path()  # compat wrapper defined at module level
         print("position: ", position)
         
         if robot_type.lower() == "franka":

@@ -28,9 +28,26 @@ import omni.usd
 import omni
 from pathlib import Path
 from pxr import UsdShade, Sdf, UsdGeom, Gf
-from omni.isaac.core.utils.stage import add_reference_to_stage
 import json
 import requests
+
+# add_reference_to_stage: try Isaac Sim 6 (isaacsim.*) first, then v5 (omni.isaac.*)
+add_reference_to_stage = None
+try:
+    from isaacsim.core.utils.stage import add_reference_to_stage
+except ImportError:
+    pass
+if add_reference_to_stage is None:
+    try:
+        from omni.isaac.core.utils.stage import add_reference_to_stage
+    except ImportError:
+        def add_reference_to_stage(usd_path, prim_path):
+            """Fallback: add a USD reference using raw USD API."""
+            import omni.usd as _ousd
+            stage = _ousd.get_context().get_stage()
+            prim = stage.DefinePrim(prim_path)
+            prim.GetReferences().AddReference(usd_path)
+            return prim
 
 
 class USDLoader:
