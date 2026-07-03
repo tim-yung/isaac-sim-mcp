@@ -442,15 +442,17 @@ class MCPExtension(omni.ext.IExt):
     
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]):
         # Lazy-import stage utilities: try v6 (isaacsim.*) then fall back to v5 (omni.isaac.*)
+        # Note: Isaac Sim 6.0.1 has no isaacsim.core.utils extension at all; the
+        # equivalent lives under isaacsim.core.experimental.utils.stage instead.
         add_reference_to_stage = None
         try:
-            from isaacsim.core.utils.stage import add_reference_to_stage
-        except ImportError:
+            from isaacsim.core.experimental.utils.stage import add_reference_to_stage
+        except Exception:
             pass
         if add_reference_to_stage is None:
             try:
                 from omni.isaac.core.utils.stage import add_reference_to_stage
-            except ImportError:
+            except Exception:
                 pass
 
         stage = omni.usd.get_context().get_stage()

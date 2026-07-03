@@ -32,15 +32,20 @@ import json
 import requests
 
 # add_reference_to_stage: try Isaac Sim 6 (isaacsim.*) first, then v5 (omni.isaac.*)
+# Note: Isaac Sim 6.0.1 has no isaacsim.core.utils extension at all; the
+# equivalent lives under isaacsim.core.experimental.utils.stage instead.
+# Catch bare Exception (not just ImportError): importing isaacsim.* helper
+# modules can trigger RuntimeErrors from interfaces (e.g. physics) that aren't
+# active yet in the current Kit app profile, and those must not propagate here.
 add_reference_to_stage = None
 try:
-    from isaacsim.core.utils.stage import add_reference_to_stage
-except ImportError:
+    from isaacsim.core.experimental.utils.stage import add_reference_to_stage
+except Exception:
     pass
 if add_reference_to_stage is None:
     try:
         from omni.isaac.core.utils.stage import add_reference_to_stage
-    except ImportError:
+    except Exception:
         def add_reference_to_stage(usd_path, prim_path):
             """Fallback: add a USD reference using raw USD API."""
             import omni.usd as _ousd
