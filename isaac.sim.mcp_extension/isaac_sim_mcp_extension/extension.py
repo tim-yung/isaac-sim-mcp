@@ -50,31 +50,45 @@ import numpy as np
 # They are NOT required for the socket server's execute_script path; only optional
 # helper methods (create_robot, get_scene_info) use them.  Wrap in try/except so
 # the extension still loads on Isaac Sim 6 even if these packages are absent.
+#
+# NOTE: catch bare Exception, not just ImportError. On Isaac Sim 6.0.1,
+# importing isaacsim.core.experimental.prims (transitively, via Articulation ->
+# SimulationManager) calls omni.physics.core.get_physics_simulation_interface()
+# at *module import time*, which raises RuntimeError (not ImportError) if the
+# physics plugin isn't active yet in the current Kit app profile (e.g. the
+# lightweight "isaacsim.exp.base.python" headless app). An uncaught RuntimeError
+# here would abort loading the whole extension module, killing the socket
+# server along with it -- so these optional imports must never be allowed to
+# propagate.
 try:
     from omni.isaac.nucleus import get_assets_root_path as _get_assets_root_path_v5
-except ImportError:
+except Exception:
     _get_assets_root_path_v5 = None
 
 try:
     from omni.isaac.core.prims import XFormPrim as _XFormPrim_v5
-except ImportError:
+except Exception:
     _XFormPrim_v5 = None
 
 try:
     from omni.isaac.core import World as _World_v5  # noqa: F401
-except ImportError:
+except Exception:
     _World_v5 = None
 
 # ---- Isaac Sim 6 imports (isaacsim.*) ------------------------------------------
 try:
     from isaacsim.storage.native import get_assets_root_path as _get_assets_root_path_v6
-except ImportError:
+except Exception:
     _get_assets_root_path_v6 = None
 
 try:
-    from isaacsim.core.experimental.prims import XFormPrim as _XFormPrim_v6
-except ImportError:
+    # Isaac Sim 6's experimental prims module names the class "XformPrim"
+    # (lowercase "f"), not "XFormPrim" like the v5 omni.isaac.core.prims class.
+    # See NOTE above: this import can raise RuntimeError, not just ImportError.
+    from isaacsim.core.experimental.prims import XformPrim as _XFormPrim_v6
+except Exception as _xform_prim_v6_exc:
     _XFormPrim_v6 = None
+    print(f"isaac_sim_mcp_extension: XformPrim (v6) unavailable at import time: {_xform_prim_v6_exc}")
 
 # Resolve to whichever version is available
 def get_assets_root_path():
